@@ -241,18 +241,11 @@ def main():
                 relevant_pages = find_relevant_pages(pages_text)
                 optimized_text = build_optimized_text(pages_text, relevant_pages)
                 
-                st.success(f"✅ Total: {len(full_text)} chars | Optimized: {len(optimized_text)} chars from pages {relevant_pages}")
+                st.success(f"✅ PDF processed successfully ({len(pages_text)} pages)")
                 
-                # Store both versions
+                # Store optimized text
                 st.session_state.pdf_text = optimized_text
-                st.session_state.full_text = full_text
-                st.session_state.relevant_pages = relevant_pages
                 
-                # Debug: Show extracted text
-                with st.expander("🔍 Debug: View Extracted Text"):
-                    st.write(f"**Relevant pages detected:** {relevant_pages}")
-                    st.text_area("Optimized PDF Text (sent to AI)", optimized_text[:3000], height=200)
-                    st.info(f"Sending {len(optimized_text)} characters to AI (saved ~{len(full_text) - len(optimized_text)} chars)")
             except Exception as e:
                 st.error(f"❌ Error reading PDF: {e}")
                 return
