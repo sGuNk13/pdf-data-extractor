@@ -181,6 +181,11 @@ def main():
             try:
                 pdf_text = extract_text_from_pdf(uploaded_file)
                 st.success(f"✅ Extracted {len(pdf_text)} characters from PDF")
+                
+                # Debug: Show extracted text
+                with st.expander("🔍 Debug: View Extracted Text"):
+                    st.text_area("Raw PDF Text", pdf_text[:3000], height=200)
+                    st.info("Showing first 3000 characters. Check if budget section (14. รายละเอียดงบประมาณ) is visible.")
             except Exception as e:
                 st.error(f"❌ Error reading PDF: {e}")
                 return
