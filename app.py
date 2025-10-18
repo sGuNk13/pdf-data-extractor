@@ -4,7 +4,7 @@ import json
 from datetime import datetime
 import PyPDF2
 import io
-from groq import Groq
+import os
 
 # Page config
 st.set_page_config(page_title="PDF Data Extractor", page_icon="📄", layout="wide")
@@ -38,9 +38,15 @@ def extract_text_from_pdf(pdf_file):
 
 # Extract data using Groq LLM
 def extract_with_groq(pdf_text, api_key):
-    client = Groq(api_key=api_key)
-    
-    prompt = f"""Extract the following information from this Thai academic PDF text and return ONLY a valid JSON object with no additional text:
+    try:
+        from groq import Groq
+        
+        # Set API key as environment variable
+        os.environ['GROQ_API_KEY'] = api_key
+        
+        client = Groq(api_key=api_key)
+        
+        prompt = f"""Extract the following information from this Thai academic PDF text and return ONLY a valid JSON object with no additional text:
 
 PDF Text:
 {pdf_text[:4000]}
@@ -59,7 +65,6 @@ Return format (JSON only, no markdown, no explanation):
   ]
 }}"""
 
-    try:
         completion = client.chat.completions.create(
             model="llama-3.3-70b-versatile",
             messages=[{"role": "user", "content": prompt}],
@@ -78,7 +83,7 @@ Return format (JSON only, no markdown, no explanation):
         data = json.loads(response_text.strip())
         return data, None
     except Exception as e:
-        return None, str(e)
+        return None, f"Error: {str(e)}"
 
 # Save to database
 def save_to_db(conn, data):
@@ -156,9 +161,12 @@ def main():
         
         # Extract text
         with st.spinner("📖 Reading PDF..."):
-            pdf_text = extract_text_from_pdf(uploaded_file)
-        
-        st.success(f"✅ Extracted {len(pdf_text)} characters from PDF")
+            try:
+                pdf_text = extract_text_from_pdf(uploaded_file)
+                st.success(f"✅ Extracted {len(pdf_text)} characters from PDF")
+            except Exception as e:
+                st.error(f"❌ Error reading PDF: {e}")
+                return
         
         # Extract with Groq
         if st.button("🤖 Extract Data with AI", type="primary"):
@@ -166,12 +174,14 @@ def main():
                 data, error = extract_with_groq(pdf_text, api_key)
             
             if error:
-                st.error(f"❌ Error: {error}")
+                st.error(f"❌ {error}")
+                st.info("💡 Tips: Make sure your API key is valid and has credits")
                 return
             
             if data:
                 st.session_state.extracted_data = data
                 st.success("✅ Data extracted successfully!")
+                st.rerun()
     
     # Show extracted data
     if 'extracted_data' in st.session_state:
