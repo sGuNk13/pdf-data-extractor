@@ -11,7 +11,6 @@ class Project(Base):
     responsible_person = Column(String(255), nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     
-    # Relationship
     budget_items = relationship("BudgetItem", back_populates="project", cascade="all, delete-orphan")
 
 class BudgetItem(Base):
@@ -23,5 +22,4 @@ class BudgetItem(Base):
     description = Column(Text)
     amount = Column(Float, nullable=False)
     
-    # Relationship
     project = relationship("Project", back_populates="budget_items")
