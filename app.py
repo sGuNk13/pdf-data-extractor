@@ -32,9 +32,65 @@ def init_db():
 def extract_text_from_pdf(pdf_file):
     pdf_reader = PyPDF2.PdfReader(pdf_file)
     text = ""
-    for page in pdf_reader.pages:
-        text += page.extract_text()
-    return text
+    total_pages = len(pdf_reader.pages)
+    
+    # Extract ALL pages with page markers
+    pages_text = {}
+    for page_num in range(total_pages):
+        page = pdf_reader.pages[page_num]
+        page_content = page.extract_text()
+        pages_text[page_num] = page_content
+        text += f"\n--- Page {page_num + 1} ---\n"
+        text += page_content
+    
+    return text, pages_text
+
+# Find relevant pages for extraction
+def find_relevant_pages(pages_text):
+    relevant_pages = set()
+    page_14_start = None
+    page_15_start = None
+    
+    for page_num, content in pages_text.items():
+        # Check if this page contains important sections
+        if "1. ชื่อโครงการ" in content or "1.ชื่อโครงการ" in content:
+            relevant_pages.add(page_num)
+        
+        if "2. ผู้รับผิดชอบ" in content or "2.ผู้รับผิดชอบ" in content:
+            relevant_pages.add(page_num)
+        
+        # Find where section 14 starts
+        if ("14. รายละเอียดงบประมาณ" in content or "14.รายละเอียดงบประมาณ" in content) and page_14_start is None:
+            page_14_start = page_num
+        
+        # Find where section 15 starts
+        if ("15." in content or "15 ." in content) and page_14_start is not None and page_15_start is None:
+            # Check if this is actually section 15 (not just "15" as a number)
+            if "15. ตัวชี้วัด" in content or "15.ตัวชี้วัด" in content or "15. " in content[:200]:
+                page_15_start = page_num
+    
+    # Add all pages from section 14 to section 15 (or end of section 14)
+    if page_14_start is not None:
+        if page_15_start is not None:
+            # Include from page 14 to page 15 (inclusive)
+            for p in range(page_14_start, page_15_start + 1):
+                relevant_pages.add(p)
+        else:
+            # If no section 15 found, include page 14 and next 2 pages as fallback
+            relevant_pages.add(page_14_start)
+            relevant_pages.add(page_14_start + 1)
+            relevant_pages.add(page_14_start + 2)
+    
+    return sorted(list(relevant_pages))
+
+# Build optimized text from relevant pages only
+def build_optimized_text(pages_text, relevant_pages):
+    optimized_text = ""
+    for page_num in relevant_pages:
+        if page_num in pages_text:
+            optimized_text += f"\n--- Page {page_num + 1} ---\n"
+            optimized_text += pages_text[page_num]
+    return optimized_text
 
 # Extract data using Groq LLM
 def extract_with_groq(pdf_text, api_key):
@@ -43,13 +99,13 @@ def extract_with_groq(pdf_text, api_key):
         
         prompt = f"""Extract the following information from this Thai academic PDF text and return ONLY a valid JSON object:
 
-PDF Text:
-{pdf_text[:6000]}
+PDF Text (ALL PAGES):
+{pdf_text[:12000]}
 
 Instructions:
 1. Find "1. ชื่อโครงการ" and extract the project name that comes after it
 2. Find "2. ผู้รับผิดชอบ" and extract the person's name (before "หลักสูตร")
-3. Find "14. รายละเอียดงบประมาณ" section and extract ALL budget line items. Look for:
+3. IMPORTANT: Find "14. รายละเอียดงบประมาณ" section (it may be on later pages) and extract ALL budget line items. Look for:
    - Activity names (like "Finance and Accounting Automation", "Accounting Systems and ERP")
    - Line items with format: "ค่า..." followed by calculations in parentheses and amounts
    - Extract the description, calculation, and amount for each item
@@ -179,21 +235,36 @@ def main():
         # Extract text
         with st.spinner("📖 Reading PDF..."):
             try:
-                pdf_text = extract_text_from_pdf(uploaded_file)
-                st.success(f"✅ Extracted {len(pdf_text)} characters from PDF")
+                full_text, pages_text = extract_text_from_pdf(uploaded_file)
+                
+                # Find relevant pages
+                relevant_pages = find_relevant_pages(pages_text)
+                optimized_text = build_optimized_text(pages_text, relevant_pages)
+                
+                st.success(f"✅ Total: {len(full_text)} chars | Optimized: {len(optimized_text)} chars from pages {relevant_pages}")
+                
+                # Store both versions
+                st.session_state.pdf_text = optimized_text
+                st.session_state.full_text = full_text
+                st.session_state.relevant_pages = relevant_pages
                 
                 # Debug: Show extracted text
                 with st.expander("🔍 Debug: View Extracted Text"):
-                    st.text_area("Raw PDF Text", pdf_text[:3000], height=200)
-                    st.info("Showing first 3000 characters. Check if budget section (14. รายละเอียดงบประมาณ) is visible.")
+                    st.write(f"**Relevant pages detected:** {relevant_pages}")
+                    st.text_area("Optimized PDF Text (sent to AI)", optimized_text[:3000], height=200)
+                    st.info(f"Sending {len(optimized_text)} characters to AI (saved ~{len(full_text) - len(optimized_text)} chars)")
             except Exception as e:
                 st.error(f"❌ Error reading PDF: {e}")
                 return
         
         # Extract with Groq
         if st.button("🤖 Extract Data with AI", type="primary"):
+            if 'pdf_text' not in st.session_state:
+                st.error("Please upload a PDF first")
+                return
+                
             with st.spinner("🧠 AI is analyzing your PDF..."):
-                data, error = extract_with_groq(pdf_text, api_key)
+                data, error = extract_with_groq(st.session_state.pdf_text, api_key)
             
             if error:
                 st.error(f"❌ {error}")
