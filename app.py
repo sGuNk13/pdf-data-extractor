@@ -39,12 +39,7 @@ def extract_text_from_pdf(pdf_file):
 # Extract data using Groq LLM
 def extract_with_groq(pdf_text, api_key):
     try:
-        from groq import Groq
-        
-        # Set API key as environment variable
-        os.environ['GROQ_API_KEY'] = api_key
-        
-        client = Groq(api_key=api_key)
+        import requests
         
         prompt = f"""Extract the following information from this Thai academic PDF text and return ONLY a valid JSON object with no additional text:
 
@@ -65,14 +60,29 @@ Return format (JSON only, no markdown, no explanation):
   ]
 }}"""
 
-        completion = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.1,
-            max_tokens=2000
+        headers = {
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json"
+        }
+        
+        payload = {
+            "model": "llama-3.3-70b-versatile",
+            "messages": [{"role": "user", "content": prompt}],
+            "temperature": 0.1,
+            "max_tokens": 2000
+        }
+        
+        response = requests.post(
+            "https://api.groq.com/openai/v1/chat/completions",
+            headers=headers,
+            json=payload
         )
         
-        response_text = completion.choices[0].message.content.strip()
+        if response.status_code != 200:
+            return None, f"API Error: {response.status_code} - {response.text}"
+        
+        result = response.json()
+        response_text = result['choices'][0]['message']['content'].strip()
         
         # Remove markdown code blocks if present
         if response_text.startswith("```"):
