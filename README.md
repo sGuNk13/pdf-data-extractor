@@ -165,7 +165,4 @@ MIT License - see LICENSE file for details
 - [React](https://react.dev/) - Frontend framework
 
 ## Contact
-
-Your Name - [@yourtwitter](https://twitter.com/yourtwitter)
-
-Project Link: [https://github.com/yourusername/pdf-data-extractor](https://github.com/yourusername/pdf-data-extractor)
+Project Link: [https://github.com/sGuNk13/pdf-data-extractor](https://github.com/yourusername/pdf-data-extractor)
