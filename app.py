@@ -180,7 +180,16 @@ def main():
     # Sidebar for API key
     with st.sidebar:
         st.header("⚙️ Settings")
-        api_key = st.text_input("Groq API Key", type="password", help="Get free API key from https://console.groq.com")
+        
+        # Try to get API key from secrets first
+        default_api_key = st.secrets.get("GROQ_API_KEY", "")
+        
+        if default_api_key:
+            st.success("✅ API Key loaded from secrets")
+            api_key = default_api_key
+        else:
+            api_key = st.text_input("Groq API Key", type="password", help="Get free API key from https://console.groq.com")
+        
         st.markdown("---")
         st.markdown("### 📊 Extracted Fields")
         st.markdown("- ชื่อโครงการ (Project Name)")
