@@ -41,22 +41,29 @@ def extract_with_groq(pdf_text, api_key):
     try:
         import requests
         
-        prompt = f"""Extract the following information from this Thai academic PDF text and return ONLY a valid JSON object with no additional text:
+        prompt = f"""Extract the following information from this Thai academic PDF text and return ONLY a valid JSON object:
 
 PDF Text:
-{pdf_text[:4000]}
+{pdf_text[:6000]}
 
-Extract:
-1. project_name (from "1. ชื่อโครงการ")
-2. responsible_person (from "2. ผู้รับผิดชอบ")
-3. budget_items (from "14. รายละเอียดงบประมาณ") as an array of objects with: activity_name, description, amount
+Instructions:
+1. Find "1. ชื่อโครงการ" and extract the project name that comes after it
+2. Find "2. ผู้รับผิดชอบ" and extract the person's name (before "หลักสูตร")
+3. Find "14. รายละเอียดงบประมาณ" section and extract ALL budget line items. Look for:
+   - Activity names (like "Finance and Accounting Automation", "Accounting Systems and ERP")
+   - Line items with format: "ค่า..." followed by calculations in parentheses and amounts
+   - Extract the description, calculation, and amount for each item
+   - Amounts are numbers with commas (like 36,000 or 12,000)
 
-Return format (JSON only, no markdown, no explanation):
+IMPORTANT: Extract ALL budget items you can find, even if there are 10+ items.
+
+Return ONLY this JSON (no markdown, no explanation):
 {{
-  "project_name": "extracted name",
-  "responsible_person": "extracted person",
+  "project_name": "project name here",
+  "responsible_person": "person name here",
   "budget_items": [
-    {{"activity_name": "activity", "description": "desc", "amount": 1000}}
+    {{"activity_name": "activity 1", "description": "ค่าตอบแทนวิทยากร (2 คน x 2 วัน x 6 ชั่วโมง x 1,500 บาท)", "amount": 36000}},
+    {{"activity_name": "activity 1", "description": "ค่าที่พักวิทยากร (2 ห้อง x 2 คืน x 2,500 บาท)", "amount": 10000}}
   ]
 }}"""
 
