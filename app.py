@@ -174,7 +174,7 @@ def save_to_db(conn, data):
 
 # Main app
 def main():
-    st.title("📄 PDF Data Extractor")
+    st.title("📄 KKBS AI: PDF Data Extractor")
     st.markdown("Extract project information from Thai academic PDFs using AI")
     
     # Sidebar for API key
