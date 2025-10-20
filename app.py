@@ -7,7 +7,7 @@ import io
 import os
 
 # Page config
-st.set_page_config(page_title="PDF Data Extractor", page_icon="📄", layout="wide")
+st.set_page_config(page_title="KKBS AI: PDF Data Extractor", page_icon="📄", layout="wide")
 
 # Initialize database
 def init_db():
@@ -190,13 +190,16 @@ def main():
         else:
             api_key = st.text_input("Groq API Key", type="password", help="Get free API key from https://console.groq.com")
         
+        # Business mode toggle (from secrets)
+        enable_save = st.secrets.get("ENABLE_SAVE", "false").lower() == "true"
+        
         st.markdown("---")
         st.markdown("### 📊 Extracted Fields")
         st.markdown("- ชื่อโครงการ (Project Name)")
         st.markdown("- ผู้รับผิดชอบ (Responsible Person)")
         st.markdown("- รายละเอียดงบประมาณ (Budget)")
         
-        if st.button("🗄️ View All Projects"):
+        if enable_save and st.button("🗄️ View All Projects"):
             st.session_state.show_projects = True
     
     # Initialize database
@@ -313,21 +316,26 @@ def main():
         
         # Save button
         st.header("3️⃣ Save to Database")
-        if st.button("💾 Save to Database", type="primary"):
-            if not data.get('project_name'):
-                st.error("❌ Project name is required")
-            elif not data.get('responsible_person'):
-                st.error("❌ Responsible person is required")
-            elif not budget_items:
-                st.error("❌ At least one budget item is required")
-            else:
-                try:
-                    project_id = save_to_db(conn, data)
-                    st.success(f"✅ Saved successfully! Project ID: {project_id}")
-                    del st.session_state.extracted_data
-                    st.balloons()
-                except Exception as e:
-                    st.error(f"❌ Error saving: {e}")
+        
+        if not enable_save:
+            st.warning("💼 **Demo Mode**: Save function is disabled. Contact us to unlock full features!")
+            st.info("📧 Email: your-email@company.com | 📞 Phone: +66-XXX-XXX-XXXX")
+        else:
+            if st.button("💾 Save to Database", type="primary"):
+                if not data.get('project_name'):
+                    st.error("❌ Project name is required")
+                elif not data.get('responsible_person'):
+                    st.error("❌ Responsible person is required")
+                elif not budget_items:
+                    st.error("❌ At least one budget item is required")
+                else:
+                    try:
+                        project_id = save_to_db(conn, data)
+                        st.success(f"✅ Saved successfully! Project ID: {project_id}")
+                        del st.session_state.extracted_data
+                        st.balloons()
+                    except Exception as e:
+                        st.error(f"❌ Error saving: {e}")
 
 if __name__ == "__main__":
     main()
