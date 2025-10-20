@@ -319,7 +319,7 @@ def main():
         
         if not enable_save:
             st.warning("💼 **Demo Mode**: Save function is disabled. Contact us to unlock full features!")
-            st.info("📧 Email: your-email@company.com | 📞 Phone: +66-XXX-XXX-XXXX")
+            st.info("📧 Email: skamolthip.filos.ai@gmail.com | 📞 Phone: +66-64-142-6195")
         else:
             if st.button("💾 Save to Database", type="primary"):
                 if not data.get('project_name'):
